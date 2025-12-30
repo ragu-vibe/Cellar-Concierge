@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply bg-background text-foreground antialiased;
+}
+
+* {
+  @apply border-border;
+}
+
+.page-shell {
+  @apply min-h-screen bg-background;
+}
+
+.glass {
+  @apply bg-white/70 backdrop-blur border border-white/40 shadow-soft;
+}
+
+.section-title {
+  @apply text-xl font-semibold tracking-tight;
+}
+
+.subtle {
+  @apply text-sm text-muted;
+}
+
+.card-grid {
+  @apply grid gap-6 lg:grid-cols-3;
+}
