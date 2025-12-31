@@ -1,0 +1,82 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply bg-background text-foreground antialiased;
+}
+
+* {
+  @apply border-border;
+}
+
+/* Layout utilities */
+.page-shell {
+  @apply min-h-screen bg-background;
+}
+
+/* Card styles */
+.glass {
+  @apply bg-white/70 backdrop-blur border border-white/40 shadow-soft;
+}
+
+.glass-card {
+  @apply bg-white/80 backdrop-blur border border-white/40 shadow-soft rounded-lg;
+}
+
+.hero-gradient {
+  background: radial-gradient(circle at top, rgba(255, 255, 255, 0.9), rgba(250, 249, 247, 0.95));
+}
+
+/* Typography utilities */
+.section-title {
+  @apply text-xl font-semibold tracking-tight;
+}
+
+.subtle {
+  @apply text-sm text-muted;
+}
+
+/* Grid layouts */
+.card-grid {
+  @apply grid gap-6 lg:grid-cols-3;
+}
+
+/* BBR brand accents */
+.bbr-accent {
+  @apply text-bbr-burgundy;
+}
+
+.bbr-highlight {
+  @apply bg-bbr-burgundy text-white;
+}
+
+.bbr-border {
+  @apply border-bbr-burgundy;
+}
+
+/* AM quote card style */
+.am-quote {
+  @apply relative pl-4 border-l-2 border-bbr-gold italic text-muted;
+}
+
+/* Chat bubble styles */
+.chat-bubble {
+  @apply rounded-2xl px-4 py-3 max-w-[80%];
+}
+
+.chat-bubble-user {
+  @apply bg-ink-900 text-white ml-auto;
+}
+
+.chat-bubble-ai {
+  @apply bg-white border border-border;
+}
+
+.chat-bubble-am {
+  @apply bg-bbr-cream border border-bbr-gold;
+}

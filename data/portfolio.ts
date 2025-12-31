@@ -1,0 +1,98 @@
+export const portfolio = [
+  {
+    id: 'cellar-1',
+    skuId: 'bbr-001',
+    name: 'Château Léoville-Barton 2018',
+    region: 'Saint-Julien',
+    vintage: 2018,
+    bottles: 6,
+    drinkWindow: '2026-2050',
+    indicativeValue: 540,
+    purchasePrice: 420,
+    tags: ['prestige', 'cellar-build', 'investment']
+  },
+  {
+    id: 'cellar-2',
+    skuId: 'bbr-028',
+    name: 'Vietti Barolo Ravera 2019',
+    region: 'Barolo',
+    vintage: 2019,
+    bottles: 3,
+    drinkWindow: '2027-2045',
+    indicativeValue: 315,
+    purchasePrice: 270,
+    tags: ['prestige', 'value', 'cellar-build']
+  },
+  {
+    id: 'cellar-3',
+    skuId: 'bbr-020',
+    name: 'Château de Beaucastel Châteauneuf-du-Pape 2019',
+    region: 'Southern Rhône',
+    vintage: 2019,
+    bottles: 12,
+    drinkWindow: '2024-2040',
+    indicativeValue: 840,
+    purchasePrice: 720,
+    tags: ['value', 'entertaining', 'cellar-build']
+  },
+  {
+    id: 'cellar-4',
+    skuId: 'bbr-043',
+    name: 'Ridge Monte Bello 2018',
+    region: 'Santa Cruz Mountains',
+    vintage: 2018,
+    bottles: 2,
+    drinkWindow: '2026-2050',
+    indicativeValue: 410,
+    purchasePrice: 350,
+    tags: ['prestige', 'investment', 'cellar-build']
+  },
+  {
+    id: 'cellar-5',
+    skuId: 'bbr-011',
+    name: 'Domaine Faiveley Gevrey-Chambertin 1er Cru Les Cazetiers 2021',
+    region: 'Côte de Nuits',
+    vintage: 2021,
+    bottles: 3,
+    drinkWindow: '2026-2040',
+    indicativeValue: 285,
+    purchasePrice: 240,
+    tags: ['prestige', 'value', 'cellar-build']
+  },
+  {
+    id: 'cellar-6',
+    skuId: 'bbr-035',
+    name: 'López de Heredia Viña Tondonia Reserva 2010',
+    region: 'Rioja',
+    vintage: 2010,
+    bottles: 6,
+    drinkWindow: '2024-2040',
+    indicativeValue: 300,
+    purchasePrice: 240,
+    tags: ['value', 'drink-now', 'entertaining']
+  },
+  {
+    id: 'cellar-7',
+    skuId: 'bbr-023',
+    name: 'Dom Pérignon 2013',
+    region: 'Champagne',
+    vintage: 2013,
+    bottles: 2,
+    drinkWindow: '2024-2040',
+    indicativeValue: 400,
+    purchasePrice: 350,
+    tags: ['prestige', 'entertaining', 'gifting']
+  },
+  {
+    id: 'cellar-8',
+    skuId: 'bbr-048',
+    name: 'Felton Road Block 5 Pinot Noir 2021',
+    region: 'Central Otago',
+    vintage: 2021,
+    bottles: 4,
+    drinkWindow: '2024-2035',
+    indicativeValue: 280,
+    purchasePrice: 240,
+    tags: ['discovery', 'value', 'drink-now']
+  }
+];
