@@ -5,6 +5,7 @@ import { monthlyPlans } from "@/data/plans";
 import { messageThreads } from "@/data/messages";
 import { sellIntents } from "@/data/sellIntents";
 import { Role, MemberProfile, MonthlyPlan, MessageThread, SellIntent } from "@/lib/types";
+import { UserCellarProfile } from "@/lib/types/cellarProfile";
 
 const defaultMember = members[0];
 
@@ -15,12 +16,16 @@ type DemoState = {
   threads: MessageThread[];
   sellTickets: SellIntent[];
   gamificationEnabled: boolean;
+  prospectProfile?: UserCellarProfile;
+  onboardingComplete: boolean;
   setRole: (role: Role) => void;
   updateMember: (member: MemberProfile) => void;
   updatePlanStatus: (planId: string, status: MonthlyPlan["status"]) => void;
   addSellIntent: (intent: SellIntent) => void;
   resetDemo: () => void;
   toggleGamification: () => void;
+  setProspectProfile: (profile: UserCellarProfile) => void;
+  resetProspect: () => void;
 };
 
 export const useDemoStore = create<DemoState>()(
@@ -32,6 +37,8 @@ export const useDemoStore = create<DemoState>()(
       threads: messageThreads,
       sellTickets: sellIntents,
       gamificationEnabled: true,
+      prospectProfile: undefined,
+      onboardingComplete: false,
       setRole: (role) => set({ role }),
       updateMember: (member) => set({ member }),
       updatePlanStatus: (planId, status) =>
@@ -40,6 +47,8 @@ export const useDemoStore = create<DemoState>()(
         })),
       addSellIntent: (intent) => set((state) => ({ sellTickets: [intent, ...state.sellTickets] })),
       toggleGamification: () => set((state) => ({ gamificationEnabled: !state.gamificationEnabled })),
+      setProspectProfile: (profile) => set({ prospectProfile: profile, onboardingComplete: true }),
+      resetProspect: () => set({ prospectProfile: undefined, onboardingComplete: false }),
       resetDemo: () =>
         set({
           role: "member",
@@ -47,7 +56,9 @@ export const useDemoStore = create<DemoState>()(
           plans: monthlyPlans,
           threads: messageThreads,
           sellTickets: sellIntents,
-          gamificationEnabled: true
+          gamificationEnabled: true,
+          prospectProfile: undefined,
+          onboardingComplete: false
         })
     }),
     { name: "cellar-concierge-demo" }

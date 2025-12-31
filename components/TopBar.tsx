@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 
 const roleNav: Record<Role, { href: string; label: string }[]> = {
   member: [
-    { href: "/onboarding", label: "Onboarding" },
+    { href: "/onboarding", label: "Consultation" },
     { href: "/dashboard", label: "Dashboard" },
     { href: "/plan", label: "Plan" },
     { href: "/portfolio", label: "Portfolio" },
