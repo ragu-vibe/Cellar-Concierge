@@ -1,0 +1,411 @@
+// Cellar Concierge Database Schema
+// SQLite database for POC - data imported from BBR CSV files
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// WINE DATA (from BBR Product + Stock files)
+// =============================================================================
+
+model Wine {
+  id                  String   @id // Material Code
+  bbrWin              String?  // BBR Wine Identification Number
+  name                String   // Material Description (Long)
+  country             String?
+  region              String?
+  producer            String?  // Property
+  colour              String?  // Red, White, Rose
+  sweetness           String?  // Dry, Off-dry, Sweet, Luscious
+  volume              Float?   // Bottle size in litres
+  hierarchyLevel2     String?  // Wine, Spirits, etc.
+  hierarchyLevel3     String?  // Still, Sparkling, Fortified
+  unitSize            String?  // BOTTLE, MAGNUM, HALF
+  unitVolume          String?  // 75CL, 150CL
+  alcoholPercentage   Float?
+  drinkingFromDate    Int?     // Year
+  drinkingToDate      Int?     // Year
+  maturity            String?  // Not ready, Ready - youthful, Ready - at best, Ready - Mature
+
+  // Grape varieties (up to 5)
+  grapeVariety1       String?
+  grapePercentage1    Float?
+  grapeVariety2       String?
+  grapePercentage2    Float?
+  grapeVariety3       String?
+  grapePercentage3    Float?
+  grapeVariety4       String?
+  grapePercentage4    Float?
+  grapeVariety5       String?
+  grapePercentage5    Float?
+
+  // Stock data (from Stock File)
+  caseSize            Int?
+  ibPricePerUnit      Float?   // In Bond price per bottle
+  ibPricePerCase      Float?   // In Bond price per case
+  dpPricePerUnit      Float?   // Duty Paid price per bottle
+  dpPricePerCase      Float?   // Duty Paid price per case
+  casesAvailable      Float?   // Can be fractional
+  bottlesAvailable    Int?
+  availableSales      Float?   // Total value available
+
+  // Derived fields
+  vintage             Int?     // Extracted from Material Code
+  qualityCode         String?  // Extracted from Material Code (00 = normal)
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  // Relations
+  portfolioHoldings   PortfolioHolding[]
+  planItems           PlanItem[]
+  allocations         Allocation[]
+  sellIntents         SellIntent[]
+}
+
+// =============================================================================
+// CUSTOMER DATA
+// =============================================================================
+
+model Customer {
+  id                  String   @id // Customer Number
+  name                String?
+  email               String?
+  accountManagerId    String?
+  accountManager      AccountManager? @relation(fields: [accountManagerId], references: [id])
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  // Relations
+  portfolioHoldings   PortfolioHolding[]
+  plans               Plan[]
+  allocations         Allocation[]
+  sellIntents         SellIntent[]
+  preferences         CustomerPreference?
+}
+
+model AccountManager {
+  id                  String   @id // Employee Responsible
+  name                String?
+  email               String?
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  // Relations
+  customers           Customer[]
+  plansToReview       Plan[]
+}
+
+// =============================================================================
+// PORTFOLIO (from CPR Holdings)
+// =============================================================================
+
+model PortfolioHolding {
+  id                  String   @id @default(cuid())
+  customerId          String
+  customer            Customer @relation(fields: [customerId], references: [id])
+  wineId              String   // Material Code
+  wine                Wine     @relation(fields: [wineId], references: [id])
+
+  quantity            Int      // Number of bottles
+  purchasePrice       Float?   // Original purchase price
+  currentMarketValue  Float?   // If available
+  storedStatus        String?  // Storage status
+  dutyStatus          String?  // Duty status
+
+  // Denormalized for quick access
+  region              String?
+  propertyCode        String?
+  propertyName        String?
+  colour              String?
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@unique([customerId, wineId])
+}
+
+// =============================================================================
+// PLANS & WORKFLOW (Cellar Concierge internal)
+// =============================================================================
+
+model Plan {
+  id                  String   @id @default(cuid())
+  customerId          String
+  customer            Customer @relation(fields: [customerId], references: [id])
+  accountManagerId    String?
+  accountManager      AccountManager? @relation(fields: [accountManagerId], references: [id])
+
+  name                String?  // e.g., "January 2025 Plan"
+  status              String   @default("draft") // draft, pending_review, approved, ordered, cancelled
+  budget              Float?
+
+  // Timestamps
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  submittedAt         DateTime?
+  approvedAt          DateTime?
+  orderedAt           DateTime?
+
+  // AM Review
+  amNote              String?  // Note from AM to customer
+
+  // Relations
+  items               PlanItem[]
+  editHistory         PlanEdit[]
+}
+
+model PlanItem {
+  id                  String   @id @default(cuid())
+  planId              String
+  plan                Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+  wineId              String
+  wine                Wine     @relation(fields: [wineId], references: [id])
+
+  quantity            Int
+  pricePerUnit        Float?   // Price at time of adding
+  priceType           String?  // IB or DP
+  reason              String?  // Why this wine was recommended
+
+  // For AM modifications
+  addedBy             String?  // "customer" or "am"
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model PlanEdit {
+  id                  String   @id @default(cuid())
+  planId              String
+  plan                Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  action              String   // add, remove, substitute
+  wineId              String?  // Wine affected
+  newWineId           String?  // For substitutions
+  reason              String?
+  editedBy            String   // "customer" or AM id
+
+  createdAt           DateTime @default(now())
+}
+
+// =============================================================================
+// ALLOCATIONS (Future feature - for campaigns)
+// =============================================================================
+
+model Allocation {
+  id                  String   @id @default(cuid())
+  customerId          String
+  customer            Customer @relation(fields: [customerId], references: [id])
+  wineId              String
+  wine                Wine     @relation(fields: [wineId], references: [id])
+
+  campaign            String?  // e.g., "En Primeur 2024"
+  quantity            Int      // Bottles allocated
+  pricePerUnit        Float?
+  priceType           String?  // IB or DP
+  expiresAt           DateTime?
+  notes               String?  // AM notes about why this is special
+
+  status              String   @default("offered") // offered, accepted, declined, expired
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+// =============================================================================
+// SELL INTENTS (Customer requests to sell)
+// =============================================================================
+
+model SellIntent {
+  id                  String   @id @default(cuid())
+  customerId          String
+  customer            Customer @relation(fields: [customerId], references: [id])
+  wineId              String
+  wine                Wine     @relation(fields: [wineId], references: [id])
+
+  quantity            Int
+  timeframe           String?  // "Within 1 month", "3-6 months", "No rush"
+  targetPrice         Float?
+  reason              String?
+
+  status              String   @default("submitted") // submitted, under_review, listed, sold, cancelled
+
+  // BBX integration (future)
+  bbxListingId        String?
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+// =============================================================================
+// CUSTOMER PREFERENCES (from BBR T360 survey data)
+// =============================================================================
+
+model CustomerPreference {
+  id                  String   @id @default(cuid())
+  customerId          String   @unique
+  customer            Customer @relation(fields: [customerId], references: [id])
+
+  // Survey metadata
+  originalSource      String?  // "Survey 1 Map to Survey 2", etc.
+  responseCreatedDate DateTime?
+  responseLastModifiedDate DateTime?
+  responseType        String?  // "Collector", etc.
+  initialStatement    String?  // "I primarily buy wine or spirits to build a cellar", etc.
+  primaryMotivation   String?  // "Both", "Wine", "Spirits"
+  whichInterests      String?  // "Both", "Wine", "Spirits"
+
+  // ===================
+  // WINE STYLE INTERESTS
+  // ===================
+  styleInterestAnswered   Boolean @default(false)
+  styleInterestAll        Boolean @default(false)
+  styleInterestRed        Boolean @default(false)
+  styleInterestWhite      Boolean @default(false)
+  styleInterestRose       Boolean @default(false)
+  styleInterestSweet      Boolean @default(false)
+  styleInterestSherryMadeira Boolean @default(false)
+  styleInterestPort       Boolean @default(false)
+  styleInterestSake       Boolean @default(false)
+
+  // ===================
+  // FRENCH WINE INTERESTS
+  // ===================
+  frenchWineAnswered      Boolean @default(false)
+  frenchWineAll           Boolean @default(false)
+  frenchRedBordeaux       Boolean @default(false)
+  frenchWhiteBordeaux     Boolean @default(false)
+  frenchRedBurgundy       Boolean @default(false)
+  frenchWhiteBurgundyChablis Boolean @default(false)
+  frenchChampagne         Boolean @default(false)
+  frenchRhoneValley       Boolean @default(false)
+  frenchLoireValley       Boolean @default(false)
+  frenchBeaujolais        Boolean @default(false)
+  frenchAlsace            Boolean @default(false)
+  frenchSweetWines        Boolean @default(false)
+  frenchSouthernFrance    Boolean @default(false)
+  frenchNone              Boolean @default(false)
+
+  // ===================
+  // ITALIAN WINE INTERESTS
+  // ===================
+  italianWineAnswered     Boolean @default(false)
+  italianWineAll          Boolean @default(false)
+  italianPiedmont         Boolean @default(false)
+  italianBrunelloMontalcino Boolean @default(false)
+  italianTuscany          Boolean @default(false)
+  italianOther            Boolean @default(false)
+  italianNone             Boolean @default(false)
+
+  // ===================
+  // EUROPEAN WINE INTERESTS
+  // ===================
+  europeanWineAnswered    Boolean @default(false)
+  europeanWineAll         Boolean @default(false)
+  europeanSpain           Boolean @default(false)
+  europeanPortugal        Boolean @default(false)
+  europeanGermanyAustria  Boolean @default(false)
+  europeanEngland         Boolean @default(false)
+  europeanOther           Boolean @default(false)
+  europeanNone            Boolean @default(false)
+
+  // ===================
+  // REST OF WORLD WINE INTERESTS
+  // ===================
+  rowWineAnswered         Boolean @default(false)
+  rowWineAll              Boolean @default(false)
+  rowSouthAmerica         Boolean @default(false)
+  rowNorthAmerica         Boolean @default(false)
+  rowAustralia            Boolean @default(false)
+  rowNewZealand           Boolean @default(false)
+  rowSouthAfrica          Boolean @default(false)
+  rowNone                 Boolean @default(false)
+
+  // ===================
+  // COLLECTOR PRICE PREFERENCES
+  // ===================
+  collectorSpendAnswered  Boolean @default(false)
+  collectorSpendAllRanges Boolean @default(false)
+  collectorSpend20to50    Boolean @default(false)
+  collectorSpend50to100   Boolean @default(false)
+  collectorSpend100to250  Boolean @default(false)
+  collectorSpend250plus   Boolean @default(false)
+
+  // ===================
+  // DRINK NOW PRICE PREFERENCES
+  // ===================
+  drinkNowSpendAnswered   Boolean @default(false)
+  drinkNowSpendAllRanges  Boolean @default(false)
+  drinkNowSpendUpTo20     Boolean @default(false)
+  drinkNowSpend20to50     Boolean @default(false)
+  drinkNowSpend50to100    Boolean @default(false)
+  drinkNowSpend100plus    Boolean @default(false)
+
+  // ===================
+  // SPIRITS INTERESTS
+  // ===================
+  spiritsInterestAnswered Boolean @default(false)
+  spiritsInterestAll      Boolean @default(false)
+  spiritsScotchWhiskies   Boolean @default(false)
+  spiritsOtherWhiskies    Boolean @default(false)
+  spiritsGin              Boolean @default(false)
+  spiritsRum              Boolean @default(false)
+  spiritsTequilaMezcal    Boolean @default(false)
+  spiritsCognacArmagnac   Boolean @default(false)
+  spiritsVodka            Boolean @default(false)
+
+  // ===================
+  // WHISKY REGION INTERESTS
+  // ===================
+  whiskyRegionAnswered    Boolean @default(false)
+  whiskyRegionAll         Boolean @default(false)
+  whiskySpeyside          Boolean @default(false)
+  whiskyHighland          Boolean @default(false)
+  whiskyLowland           Boolean @default(false)
+  whiskyIslayIslands      Boolean @default(false)
+  whiskyCampbeltown       Boolean @default(false)
+  whiskyEngland           Boolean @default(false)
+  whiskyIreland           Boolean @default(false)
+  whiskyScandinavia       Boolean @default(false)
+  whiskyRestOfEurope      Boolean @default(false)
+  whiskyBourbonUSA        Boolean @default(false)
+  whiskyRyeUSA            Boolean @default(false)
+  whiskyTaiwanIndia       Boolean @default(false)
+  whiskyJapan             Boolean @default(false)
+  whiskyAustraliaNewZealand Boolean @default(false)
+
+  // ===================
+  // SPIRITS PRICE PREFERENCES
+  // ===================
+  spiritsSpendAnswered    Boolean @default(false)
+  spiritsSpendAllRanges   Boolean @default(false)
+  spiritsSpendUpTo100     Boolean @default(false)
+  spiritsSpend100to200    Boolean @default(false)
+  spiritsSpend200to1000   Boolean @default(false)
+  spiritsSpend1000plus    Boolean @default(false)
+
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+}
+
+// =============================================================================
+// VINTAGE RATINGS (from BBR Vintage Ratings data)
+// =============================================================================
+
+model VintageRating {
+  id        String @id @default(cuid())
+  region    String
+  year      Int
+  rating    Int?   // 1-10 scale
+
+  @@unique([region, year])
+}

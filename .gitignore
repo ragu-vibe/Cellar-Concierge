@@ -4,12 +4,32 @@ node_modules
 .env
 .env.local
 
-# Data files
+# Data files (shared separately)
 *.xlsx
 *.csv
+datafiles/
+
+# Database
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+prisma/*.db
+prisma/*.db-journal
+
+# Prisma generated
+lib/generated/
 
 # Git worktrees
 worktrees/
 
 # Build artifacts
 tsconfig.tsbuildinfo
+
+/lib/generated/prisma
+
+# Claude Code
+.claude/
+
+# Windows artifacts
+nul
