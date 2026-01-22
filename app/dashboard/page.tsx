@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, TrendingUp, Wine, Calendar, User } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,17 +19,64 @@ export default function DashboardPage() {
   const plan = useDemoStore((state) => state.plan);
   const accountManager = useDemoStore((state) => state.accountManager);
   const portfolio = useDemoStore((state) => state.portfolio);
+  const portfolioLoading = useDemoStore((state) => state.portfolioLoading);
+  const fetchPortfolio = useDemoStore((state) => state.fetchPortfolio);
   const member = useDemoStore((state) => state.member);
   const gamificationEnabled = useDemoStore((state) => state.gamificationEnabled);
   const justCompletedOnboarding = useDemoStore((state) => state.justCompletedOnboarding);
   const setJustCompletedOnboarding = useDemoStore((state) => state.setJustCompletedOnboarding);
   const addChatMessage = useDemoStore((state) => state.addChatMessage);
 
+  // Fetch real portfolio data on mount
+  useEffect(() => {
+    fetchPortfolio();
+  }, [fetchPortfolio]);
+
   const totalSpent = plan.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const totalBottles = portfolio.reduce((acc, item) => acc + item.bottles, 0);
   const totalSpend = portfolio.reduce((acc, item) => acc + item.purchasePrice, 0);
   const totalValue = portfolio.reduce((acc, item) => acc + item.indicativeValue, 0);
   const gainPercent = ((totalValue - totalSpend) / totalSpend * 100).toFixed(1);
+
+  const currentYear = new Date().getFullYear();
+  const currentMonthYear = new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+  const currentMonth = new Date().toLocaleDateString('en-GB', { month: 'long' });
+
+  // Calculate drink window counts based on BBR maturity and drink window dates
+  const drinkWindowCounts = useMemo(() => {
+    let readyToDrink = 0;
+    let approachingWindow = 0;
+    let cellarLongTerm = 0;
+
+    for (const item of portfolio) {
+      const maturity = item.maturity?.toLowerCase() || '';
+      const isReady = maturity.includes('ready') && !maturity.includes('not ready');
+
+      if (isReady) {
+        // Any "Ready" status (youthful, at best, mature)
+        readyToDrink += item.bottles;
+      } else {
+        // Not ready - check drink window to determine if approaching or long-term
+        const drinkWindow = item.drinkWindow || '';
+        const [startYearStr] = drinkWindow.split('-');
+        const startYear = parseInt(startYearStr, 10);
+
+        if (!isNaN(startYear)) {
+          const yearsUntilReady = startYear - currentYear;
+          if (yearsUntilReady <= 3) {
+            approachingWindow += item.bottles;
+          } else {
+            cellarLongTerm += item.bottles;
+          }
+        } else {
+          // Unknown drink window, assume long-term
+          cellarLongTerm += item.bottles;
+        }
+      }
+    }
+
+    return { readyToDrink, approachingWindow, cellarLongTerm };
+  }, [portfolio, currentYear]);
 
   const startChat = () => {
     setJustCompletedOnboarding(false);
@@ -48,7 +96,7 @@ export default function DashboardPage() {
       <section className="hero-gradient rounded-3xl border border-border p-8 shadow-soft">
         <div className="flex flex-wrap items-start justify-between gap-6">
           <div className="space-y-2">
-            <p className="text-xs uppercase tracking-[0.2em] text-muted">December 2024</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-muted">{currentMonthYear}</p>
             <h1 className="font-display text-3xl md:text-4xl text-foreground">
               Welcome back, {member.name.split(' ')[0]}
             </h1>
@@ -68,7 +116,7 @@ export default function DashboardPage() {
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg">This Month's Plan</CardTitle>
-              <Badge variant="secondary">{plan.month}</Badge>
+              <Badge variant="secondary">{currentMonth}</Badge>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -193,16 +241,15 @@ export default function DashboardPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted">Ready to drink</span>
-                <span className="font-medium text-green-600">4 bottles</span>
+                <span className="font-medium text-green-600">{drinkWindowCounts.readyToDrink} bottles</span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted">Approaching peak</span>
-                <span className="font-medium text-amber-600">2 bottles</span>
+                <span className="text-muted">Approaching drink window</span>
+                <span className="font-medium text-amber-600">{drinkWindowCounts.approachingWindow} bottles</span>
               </div>
-              .
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted">Cellar for 3+ years</span>
-                <span className="font-medium text-muted">12 bottles</span>
+                <span className="font-medium text-muted">{drinkWindowCounts.cellarLongTerm} bottles</span>
               </div>
             </div>
             <Button variant="outline" className="w-full" onClick={() => router.push('/portfolio')}>

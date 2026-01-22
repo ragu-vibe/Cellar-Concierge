@@ -4,10 +4,14 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { memberProfile, accountManager, CollectorProfile } from '@/data/members';
 import { monthlyPlan } from '@/data/plans';
-import { portfolio } from '@/data/portfolio';
+import { portfolio as mockPortfolio } from '@/data/portfolio';
 import { threads } from '@/data/messages';
 import { sellIntents } from '@/data/sellIntents';
 import { UserCellarProfile, createEmptyProfile } from '@/lib/types/cellarProfile';
+
+// Default customer ID for real data demo
+// Customer 0020249063 has good T360 preferences (20 selected) and 204 bottles
+export const DEFAULT_MEMBER_ID = '0020249063';
 
 // Re-export types for convenience
 export type { MotivationWeights, RiskProfile, TimeHorizon, BudgetStrategy, RegionalFocus, CollectorProfile } from '@/data/members';
@@ -22,12 +26,28 @@ export type ChatMessage = {
   timestamp: string;
 };
 
+export type PortfolioItem = {
+  id: string;
+  skuId: string;
+  name: string;
+  region: string;
+  vintage: number | null;
+  bottles: number;
+  drinkWindow: string;
+  maturity: string | null; // BBR maturity: "Not ready", "Ready - youthful", "Ready - at best", "Ready - Mature"
+  indicativeValue: number;
+  purchasePrice: number;
+  tags: string[];
+};
+
 export type DemoState = {
   role: Role;
   member: typeof memberProfile;
   accountManager: typeof accountManager;
   plan: typeof monthlyPlan;
-  portfolio: typeof portfolio;
+  portfolio: PortfolioItem[];
+  portfolioLoading: boolean;
+  memberId: string;
   messages: typeof threads;
   sellIntents: typeof sellIntents;
   gamificationEnabled: boolean;
@@ -53,6 +73,8 @@ export type DemoState = {
   setCellarProfile: (profile: UserCellarProfile) => void;
   setInitialRecommendations: (wineIds: string[]) => void;
   addSellIntent: (intent: { bottle: string; timeframe: string; targetPrice: string; reason: string }) => void;
+  setPortfolio: (portfolio: PortfolioItem[]) => void;
+  fetchPortfolio: (memberId?: string) => Promise<void>;
   resetDemo: () => void;
 };
 
@@ -61,7 +83,9 @@ const initialState = {
   member: memberProfile,
   accountManager,
   plan: monthlyPlan,
-  portfolio,
+  portfolio: [] as PortfolioItem[],  // Start empty, fetch real data
+  portfolioLoading: true,  // Start in loading state
+  memberId: DEFAULT_MEMBER_ID,
   messages: threads,
   sellIntents,
   gamificationEnabled: true,
@@ -122,8 +146,47 @@ export const useDemoStore = create<DemoState>()(
             }
           ]
         })),
+      setPortfolio: (portfolio) => set({ portfolio }),
+      fetchPortfolio: async (memberId?: string) => {
+        const id = memberId || get().memberId;
+        set({ portfolioLoading: true });
+        try {
+          const response = await fetch(`/api/bbr/portfolio?memberId=${id}`);
+          const data = await response.json();
+          if (data.portfolio && data.portfolio.length > 0) {
+            set({ portfolio: data.portfolio, memberId: id, portfolioLoading: false });
+          } else {
+            // Fall back to mock data if no real data found
+            set({ portfolio: mockPortfolio as PortfolioItem[], portfolioLoading: false });
+          }
+        } catch (error) {
+          console.error('Failed to fetch portfolio:', error);
+          // Fall back to mock data on error
+          set({ portfolio: mockPortfolio as PortfolioItem[], portfolioLoading: false });
+        }
+      },
       resetDemo: () => set(initialState)
     }),
-    { name: 'cellar-concierge-demo' }
+{
+      name: 'cellar-concierge-demo',
+      // Don't persist portfolio data - always fetch fresh from API
+      partialize: (state) => ({
+        role: state.role,
+        member: state.member,
+        plan: state.plan,
+        memberId: state.memberId,
+        sellIntents: state.sellIntents,
+        gamificationEnabled: state.gamificationEnabled,
+        marketplaceExpansionEnabled: state.marketplaceExpansionEnabled,
+        showOnboarding: state.showOnboarding,
+        hasCompletedOnboarding: state.hasCompletedOnboarding,
+        justCompletedOnboarding: state.justCompletedOnboarding,
+        chatMessages: state.chatMessages,
+        chatOpen: state.chatOpen,
+        cellarProfile: state.cellarProfile,
+        initialRecommendations: state.initialRecommendations,
+        // Explicitly exclude: portfolio, portfolioLoading
+      }),
+    }
   )
 );

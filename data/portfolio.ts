@@ -7,6 +7,7 @@ export const portfolio = [
     vintage: 2018,
     bottles: 6,
     drinkWindow: '2026-2050',
+    maturity: 'Not ready',
     indicativeValue: 540,
     purchasePrice: 420,
     tags: ['prestige', 'cellar-build', 'investment']
@@ -19,6 +20,7 @@ export const portfolio = [
     vintage: 2019,
     bottles: 3,
     drinkWindow: '2027-2045',
+    maturity: 'Not ready',
     indicativeValue: 315,
     purchasePrice: 270,
     tags: ['prestige', 'value', 'cellar-build']
@@ -31,6 +33,7 @@ export const portfolio = [
     vintage: 2019,
     bottles: 12,
     drinkWindow: '2024-2040',
+    maturity: 'Ready - youthful',
     indicativeValue: 840,
     purchasePrice: 720,
     tags: ['value', 'entertaining', 'cellar-build']
@@ -43,6 +46,7 @@ export const portfolio = [
     vintage: 2018,
     bottles: 2,
     drinkWindow: '2026-2050',
+    maturity: 'Not ready',
     indicativeValue: 410,
     purchasePrice: 350,
     tags: ['prestige', 'investment', 'cellar-build']
@@ -55,6 +59,7 @@ export const portfolio = [
     vintage: 2021,
     bottles: 3,
     drinkWindow: '2026-2040',
+    maturity: 'Not ready',
     indicativeValue: 285,
     purchasePrice: 240,
     tags: ['prestige', 'value', 'cellar-build']
@@ -67,6 +72,7 @@ export const portfolio = [
     vintage: 2010,
     bottles: 6,
     drinkWindow: '2024-2040',
+    maturity: 'Ready - at best',
     indicativeValue: 300,
     purchasePrice: 240,
     tags: ['value', 'drink-now', 'entertaining']
@@ -79,6 +85,7 @@ export const portfolio = [
     vintage: 2013,
     bottles: 2,
     drinkWindow: '2024-2040',
+    maturity: 'Ready - youthful',
     indicativeValue: 400,
     purchasePrice: 350,
     tags: ['prestige', 'entertaining', 'gifting']
@@ -91,6 +98,7 @@ export const portfolio = [
     vintage: 2021,
     bottles: 4,
     drinkWindow: '2024-2035',
+    maturity: 'Ready - Mature',
     indicativeValue: 280,
     purchasePrice: 240,
     tags: ['discovery', 'value', 'drink-now']

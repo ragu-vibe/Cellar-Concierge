@@ -32,7 +32,7 @@ function getRecommendedWines(profile: {
     let score = 0;
 
     // Drink window matching
-    const yearsUntilReady = wine.drink_window_start - 2024;
+    const yearsUntilReady = wine.drink_window_start - new Date().getFullYear();
     if (profile.splitNow > 0.4 && yearsUntilReady <= 2) score += 20;
     if (profile.splitMid > 0.3 && yearsUntilReady >= 2 && yearsUntilReady <= 10) score += 15;
     if (profile.splitLong > 0.3 && yearsUntilReady > 10) score += 15;

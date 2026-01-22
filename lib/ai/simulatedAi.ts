@@ -35,7 +35,7 @@ export function computeScore(item: InventoryItem, input: PlanInput) {
   // Drink window fit based on time horizon
   const timeHorizonYears = input.collectorProfile.timeHorizon === 'short' ? 3 :
                            input.collectorProfile.timeHorizon === 'medium' ? 7 : 12;
-  const drinkWindowFit = item.drink_window_start <= (2024 + timeHorizonYears) ? 12 : 0;
+  const drinkWindowFit = item.drink_window_start <= (new Date().getFullYear() + timeHorizonYears) ? 12 : 0;
 
   // Region fit
   const regionFit = input.constraints.regions.includes(item.region) ? 8 : 2;
@@ -150,6 +150,33 @@ export const mockPortfolioSummary = {
   disclaimers: 'Indicative only. Not investment advice.'
 };
 
+// Generate realistic portfolio history based on current value
+// Shows gradual growth with mild volatility, ending at current value
+export function generatePortfolioHistory(currentValue: number) {
+  const months = ['Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan'];
+
+  // Start at 95-97% of current value (showing ~3-5% growth over 6 months)
+  const startPercent = 0.95 + Math.random() * 0.02;
+  const startValue = currentValue * startPercent;
+
+  // Generate path from start to current with mild volatility
+  const history: { month: string; value: number }[] = [];
+
+  for (let i = 0; i < months.length; i++) {
+    const progress = i / (months.length - 1); // 0 to 1
+    const baseValue = startValue + (currentValue - startValue) * progress;
+
+    // Add mild noise (+/- 1%) except for the last point which should be exact
+    const noise = i === months.length - 1 ? 0 : (Math.random() - 0.5) * 0.02 * baseValue;
+    const value = Math.round(baseValue + noise);
+
+    history.push({ month: months[i], value });
+  }
+
+  return history;
+}
+
+// Legacy static mock for backwards compatibility
 export const mockPortfolioHistory = [
   { month: 'Apr', value: 3200 },
   { month: 'May', value: 3450 },

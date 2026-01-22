@@ -15,8 +15,9 @@ import * as path from 'path';
 
 // Get database path from DATABASE_URL
 const dbUrl = process.env.DATABASE_URL || 'file:./cellar-concierge.db';
-const dbPath = dbUrl.replace(/^file:\.?\//, '');
-const absoluteDbPath = path.resolve(process.cwd(), dbPath);
+// Handle both relative (file:./db.db) and absolute (file:F:/path/db.db) paths
+const dbPath = dbUrl.replace(/^file:/, '');
+const absoluteDbPath = path.isAbsolute(dbPath) ? dbPath : path.resolve(process.cwd(), dbPath.replace(/^\.\//, ''));
 
 console.log(`Database: ${absoluteDbPath}`);
 
@@ -175,13 +176,18 @@ function seedWines() {
 function seedCustomersAndHoldings() {
   console.log('\n👥 Seeding customers and holdings...');
 
-  const holdingsData = readCSV('J0064 -DATA - CPR Holdings Non FINE WINE.csv');
+  // Read both CPR holdings files (Non Fine Wine + Fine Wine)
+  const nonFineWineData = readCSV('J0064 -DATA - CPR Holdings Non FINE WINE.csv');
+  const fineWineData = readCSV('J0064 -DATA - CPR Holdings Fine Wine.csv');
+
+  const holdingsData = [...nonFineWineData, ...fineWineData];
+
   if (holdingsData.length === 0) {
     console.log('   No holdings data');
     return;
   }
 
-  console.log(`   Found ${holdingsData.length} holding records`);
+  console.log(`   Found ${nonFineWineData.length} non-fine wine + ${fineWineData.length} fine wine = ${holdingsData.length} total holdings`);
 
   // Collect unique customers and AMs
   const customersMap = new Map<string, string | null>();

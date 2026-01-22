@@ -47,7 +47,8 @@ const generateMockResponse = (message: string, context: ChatContext): string => 
 
   // Plan questions
   if (lowerMessage.includes('plan') || lowerMessage.includes('month') || lowerMessage.includes('recommendation') || lowerMessage.includes('buy')) {
-    return `For your December allocation, I'm focusing on your investment-forward profile while ensuring you have some bottles ready for the holiday season.\n\nMy top picks this month:\n• **Château Léoville-Barton 2018** (£85) - Strong appreciation potential, Saint-Julien is performing well\n• **Domaine de la Côte de Beaune 2021** (£62) - Entry point to a rising Burgundy producer\n• **Luis Seabra Xisto Ilimitado 2020** (£38) - Excellent value, Douro discovery\n\nThis leaves £65 of your £250 budget. Want me to suggest how to allocate the remainder?`;
+    const currentMonth = new Date().toLocaleDateString('en-GB', { month: 'long' });
+    return `For your ${currentMonth} allocation, I'm focusing on your investment-forward profile while ensuring you have some bottles ready to enjoy.\n\nMy top picks this month:\n• **Château Léoville-Barton 2018** (£85) - Strong appreciation potential, Saint-Julien is performing well\n• **Domaine de la Côte de Beaune 2021** (£62) - Entry point to a rising Burgundy producer\n• **Luis Seabra Xisto Ilimitado 2020** (£38) - Excellent value, Douro discovery\n\nThis leaves £65 of your £250 budget. Want me to suggest how to allocate the remainder?`;
   }
 
   // Investment questions

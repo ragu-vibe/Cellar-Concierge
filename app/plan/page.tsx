@@ -21,6 +21,7 @@ export default function PlanPage() {
   const [toast, setToast] = useState<string | null>(null);
 
   const totalSpent = plan.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const currentMonth = new Date().toLocaleDateString('en-GB', { month: 'long' });
 
   const handleSendToAM = () => {
     setPlanStatus('Sent to AM');
@@ -33,7 +34,7 @@ export default function PlanPage() {
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-1">
-          <p className="text-xs uppercase tracking-[0.2em] text-muted">{plan.month} Plan</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-muted">{currentMonth} Plan</p>
           <h1 className="font-display text-3xl text-foreground">Review Your Draft</h1>
           <p className="text-muted">
             £{totalSpent} of £{plan.budget} allocated
