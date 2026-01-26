@@ -198,3 +198,62 @@ export const DEFAULT_MEMBER_ID = '0020249063';
 ```
 
 Then clear browser localStorage to reset.
+
+---
+
+## Preference Systems: T360 vs CBC Wizard
+
+The app has two different preference systems that both produce the same `CollectorProfile` output but capture data differently.
+
+### T360 Survey (BBR's Real System)
+
+BBR's existing customer preference survey. Stored in database, loaded via `/api/bbr/preferences`.
+
+**What it captures:**
+- Specific wine styles (red, white, rosé, sparkling, sweet, port, sake)
+- Specific regions (Bordeaux, Burgundy, Champagne, Rhône, Loire, Piedmont, Tuscany, Spain, Portugal, Germany, Australia, NZ, Americas, South Africa)
+- Budget ranges for collecting (£20-50, £50-100, £100-250, £250+)
+- Budget ranges for drinking now (up to £20, £20-50, £50-100, £100+)
+- Initial statement about collecting goals
+
+**How we use it:**
+- Transform boolean fields → `CollectorProfile` (motivations, riskProfile, timeHorizon, budgetStrategy, regionalFocus)
+- Extract region list for display
+- Infer budget from spending ranges
+
+### CBC Wizard (In-App Preferences)
+
+Choice-Based Conjoint questionnaire accessed via "Preferences" button in navbar. 10 behavioral trade-off questions.
+
+**What it captures:**
+- Investment vs consumption priority
+- Collection depth vs breadth
+- Recognition vs discovery
+- Risk tolerance (certainty vs upside)
+- Liquidity vs return preference
+- Drinking timeline
+- Regional strategy (focused vs diverse)
+- Budget strategy (trophy/balanced/volume)
+- Decision-making style
+- 10-year vision
+
+**What it does NOT capture:**
+- Specific regions (only asks depth vs breadth)
+- Specific wine styles
+- Actual budget amounts in £
+
+### Key Difference
+
+| Aspect | T360 | CBC Wizard |
+|--------|------|------------|
+| **Approach** | Direct preferences ("Do you like Bordeaux?") | Behavioral inference ("Would you rather...") |
+| **Region data** | Yes - specific regions | No - only depth/breadth strategy |
+| **Budget data** | Yes - actual £ ranges | No - only trophy/balanced/volume |
+| **Wine styles** | Yes - red, white, etc. | No |
+| **Motivations** | Inferred from patterns | Directly measured via trade-offs |
+
+### Demo Implications
+
+- **Dashboard profile card**: Shows T360 data (real from database)
+- **CBC wizard**: Lets users recalibrate behavioral preferences, but doesn't capture region/style specifics
+- **If user completes CBC wizard**: It overwrites the behavioral aspects (motivations, risk, etc.) but doesn't touch regions since CBC doesn't capture them
