@@ -1,12 +1,11 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Wine, MessageCircle, User, ArrowRight, Sparkles, Calendar, TrendingUp } from 'lucide-react';
+import { Wine, MessageCircle, User, ArrowRight, Sparkles, Calendar, TrendingUp, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useDemoStore } from '@/lib/store/demoStore';
-import { inventory } from '@/data/inventory';
 import { cn } from '@/lib/utils';
 
 /**
@@ -14,54 +13,25 @@ import { cn } from '@/lib/utils';
  *
  * This component:
  * 1. Shows a personalized welcome message based on their profile
- * 2. Displays 3 initial wine recommendations
+ * 2. Displays 3 initial wine recommendations from the database
  * 3. Introduces the Account Manager
  * 4. Opens chat with a personalized greeting
  */
 
-// Get top wines based on profile (simplified scoring)
-function getRecommendedWines(profile: {
-  splitNow: number;
-  splitMid: number;
-  splitLong: number;
-  regions: string[];
-  budget: number;
-}, count: number = 3) {
-  // Score each wine based on profile match
-  const scored = inventory.map((wine) => {
-    let score = 0;
-
-    // Drink window matching
-    const yearsUntilReady = wine.drink_window_start - new Date().getFullYear();
-    if (profile.splitNow > 0.4 && yearsUntilReady <= 2) score += 20;
-    if (profile.splitMid > 0.3 && yearsUntilReady >= 2 && yearsUntilReady <= 10) score += 15;
-    if (profile.splitLong > 0.3 && yearsUntilReady > 10) score += 15;
-
-    // Region match
-    if (profile.regions.some((r) => wine.region.toLowerCase().includes(r.toLowerCase()))) {
-      score += 25;
-    }
-
-    // Price fit (prefer wines in the sweet spot of their budget)
-    const avgBottlePrice = profile.budget / 4;
-    const priceDiff = Math.abs(wine.price_gbp - avgBottlePrice);
-    score += Math.max(0, 20 - priceDiff / 5);
-
-    // Availability bonus
-    if (wine.availability > 80) score += 10;
-
-    // Critic signal
-    if (wine.critic_signal >= 92) score += 10;
-
-    return { wine, score };
-  });
-
-  // Sort by score and return top N
-  return scored
-    .sort((a, b) => b.score - a.score)
-    .slice(0, count)
-    .map((s) => s.wine);
-}
+// Wine type from API response
+type RecommendedWine = {
+  id: string;
+  name: string;
+  producer: string | null;
+  region: string | null;
+  vintage: number | null;
+  price_gbp: number | null;
+  drink_window_start: number | null;
+  drink_window_end: number | null;
+  scarcity_level: 'Low' | 'Medium' | 'High' | 'Ultra';
+  availability: number;
+  critic_signal: number | null;
+};
 
 export function WelcomeFlow() {
   const router = useRouter();
@@ -75,18 +45,42 @@ export function WelcomeFlow() {
 
   const [step, setStep] = useState<'welcome' | 'recommendations' | 'am_intro'>('welcome');
   const [isVisible, setIsVisible] = useState(false);
+  const [recommendedWines, setRecommendedWines] = useState<RecommendedWine[]>([]);
+  const [winesLoading, setWinesLoading] = useState(false);
 
-  // Get recommended wines based on profile
-  const recommendedWines = useMemo(() => {
-    const profile = {
-      splitNow: member.collectorProfile?.motivations.future_drinking / 100 || 0.3,
-      splitMid: 0.35,
-      splitLong: member.collectorProfile?.motivations.investment / 100 || 0.35,
-      regions: cellarProfile?.themes.regions || ['bordeaux', 'burgundy'],
-      budget: member.constraints.budget,
-    };
-    return getRecommendedWines(profile);
-  }, [member, cellarProfile]);
+  // Fetch recommended wines from API based on profile
+  useEffect(() => {
+    if (justCompletedOnboarding && step === 'welcome') {
+      const fetchWines = async () => {
+        setWinesLoading(true);
+        try {
+          const splitNow = member.collectorProfile?.motivations.future_drinking / 100 || 0.3;
+          const splitLong = member.collectorProfile?.motivations.investment / 100 || 0.35;
+          const regions = cellarProfile?.themes.regions || ['bordeaux', 'burgundy'];
+          const budget = member.constraints.budget;
+
+          const params = new URLSearchParams({
+            budget: budget.toString(),
+            regions: regions.join(','),
+            splitNow: splitNow.toString(),
+            splitLong: splitLong.toString(),
+            count: '3',
+          });
+
+          const response = await fetch(`/api/wines/recommended?${params}`);
+          if (response.ok) {
+            const data = await response.json();
+            setRecommendedWines(data.wines || []);
+          }
+        } catch (error) {
+          console.error('Failed to fetch recommended wines:', error);
+        } finally {
+          setWinesLoading(false);
+        }
+      };
+      fetchWines();
+    }
+  }, [justCompletedOnboarding, step, member, cellarProfile]);
 
   useEffect(() => {
     if (justCompletedOnboarding) {
@@ -209,37 +203,52 @@ export function WelcomeFlow() {
               <p className="text-muted">Based on your profile, here are three to start the conversation.</p>
             </div>
 
-            <div className="space-y-4">
-              {recommendedWines.map((wine, index) => (
-                <Card key={wine.id} className="overflow-hidden">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{wine.name}</p>
-                        <p className="text-sm text-muted">{wine.producer} · {wine.region}</p>
-                        <div className="flex items-center gap-3 mt-2 text-xs text-muted">
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {wine.drink_window_start}-{wine.drink_window_end}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <TrendingUp className="h-3 w-3" />
-                            {wine.critic_signal} pts
-                          </span>
+            {winesLoading ? (
+              <div className="flex flex-col items-center justify-center py-8 space-y-3">
+                <Loader2 className="h-6 w-6 animate-spin text-muted" />
+                <p className="text-sm text-muted">Finding wines for you...</p>
+              </div>
+            ) : recommendedWines.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-muted">We're preparing your recommendations...</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {recommendedWines.map((wine) => (
+                  <Card key={wine.id} className="overflow-hidden">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{wine.name}</p>
+                          <p className="text-sm text-muted">{wine.producer} · {wine.region}</p>
+                          <div className="flex items-center gap-3 mt-2 text-xs text-muted">
+                            {wine.drink_window_start && wine.drink_window_end && (
+                              <span className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                {wine.drink_window_start}-{wine.drink_window_end}
+                              </span>
+                            )}
+                            {wine.critic_signal && (
+                              <span className="flex items-center gap-1">
+                                <TrendingUp className="h-3 w-3" />
+                                {wine.critic_signal} pts
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="font-semibold text-bbr-burgundy">£{wine.price_gbp}</p>
+                          <p className="text-xs text-muted capitalize">{wine.scarcity_level} availability</p>
                         </div>
                       </div>
-                      <div className="text-right shrink-0">
-                        <p className="font-semibold text-bbr-burgundy">£{wine.price_gbp}</p>
-                        <p className="text-xs text-muted capitalize">{wine.scarcity_level} availability</p>
-                      </div>
-                    </div>
-                    <p className="text-sm text-muted mt-3 pt-3 border-t border-border">
-                      {getWineRationale(wine, member.collectorProfile)}
-                    </p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                      <p className="text-sm text-muted mt-3 pt-3 border-t border-border">
+                        {getWineRationale(wine, member.collectorProfile)}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
 
             <div className="flex justify-center gap-3">
               <Button variant="outline" onClick={handleSkipToChat}>
@@ -322,7 +331,7 @@ What would you like to explore first?`;
 }
 
 function getWineRationale(
-  wine: (typeof inventory)[0],
+  wine: RecommendedWine,
   profile: { motivations: Record<string, number> } | undefined
 ): string {
   const motivations = profile?.motivations || {};
@@ -332,17 +341,18 @@ function getWineRationale(
     .map(([k]) => k);
 
   const rationales: string[] = [];
+  const currentYear = new Date().getFullYear();
 
-  if (topMotives.includes('investment') && wine.scarcity_level === 'High') {
+  if (topMotives.includes('investment') && (wine.scarcity_level === 'High' || wine.scarcity_level === 'Ultra')) {
     rationales.push('strong secondary market appeal');
   }
-  if (topMotives.includes('future_drinking') && wine.drink_window_start <= 2026) {
+  if (topMotives.includes('future_drinking') && wine.drink_window_start && wine.drink_window_start <= currentYear + 2) {
     rationales.push('ready to enjoy soon');
   }
   if (topMotives.includes('exploration') && wine.scarcity_level === 'Low') {
     rationales.push('excellent discovery value');
   }
-  if (wine.critic_signal >= 93) {
+  if (wine.critic_signal && wine.critic_signal >= 93) {
     rationales.push(`critically acclaimed (${wine.critic_signal} pts)`);
   }
 
@@ -350,5 +360,9 @@ function getWineRationale(
     rationales.push('matches your profile preferences');
   }
 
-  return `Selected for ${rationales.join(', ')}. Drinking window ${wine.drink_window_start}-${wine.drink_window_end}.`;
+  const drinkWindow = wine.drink_window_start && wine.drink_window_end
+    ? `Drinking window ${wine.drink_window_start}-${wine.drink_window_end}.`
+    : '';
+
+  return `Selected for ${rationales.join(', ')}. ${drinkWindow}`;
 }
