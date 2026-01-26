@@ -2,12 +2,13 @@
 
 import { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, TrendingUp, Wine, Calendar, User } from 'lucide-react';
+import { ArrowRight, TrendingUp, Calendar, User, Wine } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { CellarHealthScoreCard } from '@/components/shared/CellarHealthScoreCard';
+import { CollectorProfileCard } from '@/components/shared/CollectorProfileCard';
 import { BudgetBar } from '@/components/shared/BudgetBar';
 import { ChatPanel } from '@/components/chat/ChatPanel';
 import { useDemoStore } from '@/lib/store/demoStore';
@@ -19,18 +20,20 @@ export default function DashboardPage() {
   const plan = useDemoStore((state) => state.plan);
   const accountManager = useDemoStore((state) => state.accountManager);
   const portfolio = useDemoStore((state) => state.portfolio);
-  const portfolioLoading = useDemoStore((state) => state.portfolioLoading);
   const fetchPortfolio = useDemoStore((state) => state.fetchPortfolio);
+  const fetchPreferences = useDemoStore((state) => state.fetchPreferences);
   const member = useDemoStore((state) => state.member);
+  const preferencesLoading = useDemoStore((state) => state.preferencesLoading);
   const gamificationEnabled = useDemoStore((state) => state.gamificationEnabled);
   const justCompletedOnboarding = useDemoStore((state) => state.justCompletedOnboarding);
   const setJustCompletedOnboarding = useDemoStore((state) => state.setJustCompletedOnboarding);
   const addChatMessage = useDemoStore((state) => state.addChatMessage);
 
-  // Fetch real portfolio data on mount
+  // Fetch real portfolio and preferences on mount
   useEffect(() => {
     fetchPortfolio();
-  }, [fetchPortfolio]);
+    fetchPreferences();
+  }, [fetchPortfolio, fetchPreferences]);
 
   const totalSpent = plan.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const totalBottles = portfolio.reduce((acc, item) => acc + item.bottles, 0);
@@ -257,6 +260,15 @@ export default function DashboardPage() {
             </Button>
           </CardContent>
         </Card>
+      </section>
+
+      {/* Collector Profile - Full Width */}
+      <section>
+        <CollectorProfileCard
+          profile={member.collectorProfile}
+          regions={member.constraints.regions}
+          loading={preferencesLoading}
+        />
       </section>
 
       {/* Chat Panel */}

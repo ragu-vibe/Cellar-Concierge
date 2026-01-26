@@ -10,28 +10,29 @@ interface MotivationsPanelProps {
 export function MotivationsPanel({ motivations }: MotivationsPanelProps) {
   const motivationMapping: { [key: string]: string } = {
     investment: "Investment",
-    learning: "Learning",
-    social: "Social",
-    collecting: "Collecting",
-    drinking: "Drinking",
-    curiosity: "Curiosity",
+    portfolio_building: "Portfolio Building",
+    future_drinking: "Future Drinking",
+    status_gifting: "Entertaining & Gifting",
+    exploration: "Exploration",
+    legacy: "Legacy",
   };
 
   const sortedMotivations = Object.entries(motivations)
+    .filter(([, value]) => value > 0)
     .sort(([, a], [, b]) => b - a)
     .slice(0, 3);
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Your Top 3 Motivations</CardTitle>
+        <CardTitle>Your Top Motivations</CardTitle>
       </CardHeader>
       <CardContent>
         <ul className="space-y-2">
           {sortedMotivations.map(([key, value]) => (
             <li key={key} className="flex justify-between">
-              <span>{motivationMapping[key]}</span>
-              <span className="font-semibold">{(value * 100).toFixed(0)}%</span>
+              <span>{motivationMapping[key] || key}</span>
+              <span className="font-semibold">{value}%</span>
             </li>
           ))}
         </ul>
