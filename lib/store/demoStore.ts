@@ -3,7 +3,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { memberProfile, accountManager, CollectorProfile } from '@/data/members';
-import { monthlyPlan } from '@/data/plans';
+import { monthlyPlan, PlanItem, PlanStatus } from '@/data/plans';
 import { portfolio as mockPortfolio } from '@/data/portfolio';
 import { threads } from '@/data/messages';
 import { sellIntents } from '@/data/sellIntents';
@@ -40,13 +40,26 @@ export type PortfolioItem = {
   tags: string[];
 };
 
+// Plan with enriched wine data from database
+export type Plan = {
+  id: string;
+  month: string;
+  status: PlanStatus;
+  budget: number;
+  amNote: string;
+  items: PlanItem[];
+};
+
 export type DemoState = {
   role: Role;
   member: typeof memberProfile;
   accountManager: typeof accountManager;
-  plan: typeof monthlyPlan;
+  plan: Plan;
+  planLoading: boolean;
+  alternativePlanItems: PlanItem[];
   portfolio: PortfolioItem[];
   portfolioLoading: boolean;
+  preferencesLoading: boolean;
   memberId: string;
   messages: typeof threads;
   sellIntents: typeof sellIntents;
@@ -75,16 +88,38 @@ export type DemoState = {
   addSellIntent: (intent: { bottle: string; timeframe: string; targetPrice: string; reason: string }) => void;
   setPortfolio: (portfolio: PortfolioItem[]) => void;
   fetchPortfolio: (memberId?: string) => Promise<void>;
+  fetchPreferences: (memberId?: string) => Promise<void>;
+  fetchPlan: () => Promise<void>;
   resetDemo: () => void;
+};
+
+// Default plan with placeholder wine data (will be enriched by fetchPlan)
+const defaultPlan: Plan = {
+  id: monthlyPlan.id,
+  month: monthlyPlan.month,
+  status: monthlyPlan.status,
+  budget: monthlyPlan.budget,
+  amNote: monthlyPlan.amNote,
+  items: monthlyPlan.items.map(item => ({
+    ...item,
+    name: 'Loading...',
+    producer: '',
+    region: '',
+    vintage: 0,
+    price: 0,
+  })),
 };
 
 const initialState = {
   role: 'member' as Role,
   member: memberProfile,
   accountManager,
-  plan: monthlyPlan,
+  plan: defaultPlan,
+  planLoading: true,  // Start in loading state
+  alternativePlanItems: [] as PlanItem[],
   portfolio: [] as PortfolioItem[],  // Start empty, fetch real data
   portfolioLoading: true,  // Start in loading state
+  preferencesLoading: true,  // Start in loading state
   memberId: DEFAULT_MEMBER_ID,
   messages: threads,
   sellIntents,
@@ -163,6 +198,55 @@ export const useDemoStore = create<DemoState>()(
           console.error('Failed to fetch portfolio:', error);
           // Fall back to mock data on error
           set({ portfolio: mockPortfolio as PortfolioItem[], portfolioLoading: false });
+        }
+      },
+      fetchPreferences: async (memberId?: string) => {
+        const id = memberId || get().memberId;
+        set({ preferencesLoading: true });
+        try {
+          const response = await fetch(`/api/bbr/preferences?memberId=${id}`);
+          const data = await response.json();
+          if (data.collectorProfile) {
+            set((state) => ({
+              member: {
+                ...state.member,
+                collectorProfile: data.collectorProfile,
+                constraints: {
+                  ...state.member.constraints,
+                  regions: data.regions || state.member.constraints.regions,
+                  budget: data.budget || state.member.constraints.budget
+                }
+              },
+              preferencesLoading: false
+            }));
+          } else {
+            set({ preferencesLoading: false });
+          }
+        } catch (error) {
+          console.error('Failed to fetch preferences:', error);
+          set({ preferencesLoading: false });
+        }
+      },
+      fetchPlan: async () => {
+        set({ planLoading: true });
+        try {
+          const response = await fetch('/api/bbr/plan');
+          const data = await response.json();
+          if (data.plan) {
+            set((state) => ({
+              plan: {
+                ...data.plan,
+                status: state.plan.status, // Preserve current status
+              },
+              alternativePlanItems: data.alternatives || [],
+              planLoading: false,
+            }));
+          } else {
+            set({ planLoading: false });
+          }
+        } catch (error) {
+          console.error('Failed to fetch plan:', error);
+          set({ planLoading: false });
         }
       },
       resetDemo: () => set(initialState)
